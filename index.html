@@ -93,6 +93,9 @@
   .msg-body { background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 13px; font-size: 14px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; color: var(--text); }
   .addr-input { width:100%; padding:12px 14px; background:var(--bg); border:1.5px solid var(--border); border-radius:10px; color:var(--text); font-family:"DM Sans",sans-serif; font-size:15px; outline:none; transition:border-color 0.15s; }
   .addr-input:focus { border-color:var(--purple); }
+  .base-btn { flex:1; padding:10px 8px; background:var(--white); border:1.5px solid var(--border); border-radius:10px; font-family:"DM Sans",sans-serif; font-size:13px; font-weight:500; color:var(--text); cursor:pointer; touch-action:manipulation; transition:all 0.15s; }
+  .base-btn:active { transform:scale(0.96); }
+  .base-btn.selected { background:#f5f0ff; border-color:var(--purple); color:var(--purple); font-weight:700; }
   .route-btn { width:100%; padding:12px; background:var(--purple); color:#fff; border:none; border-radius:10px; font-family:"DM Sans",sans-serif; font-size:14px; font-weight:600; cursor:pointer; touch-action:manipulation; transition:background 0.15s, transform 0.08s; }
   .route-btn:active { transform:scale(0.97); background:#6d28d9; }
   .route-btn.loading { background:#a78bfa; }
@@ -189,9 +192,13 @@
   <div class="rresult purple" id="bres">Vuokra: <strong>0 €</strong> <span style="color:var(--muted);font-size:12px;">(0.20 € / ltk / vrk)</span></div>
 
   <div class="section-label" style="margin:6px 0 4px;border-bottom:1px solid var(--purple-border);padding-bottom:6px;color:var(--purple);font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:700;">Toimitus &amp; Haku</div>
+  <div style="display:flex;gap:8px;margin-bottom:4px;">
+    <button class="base-btn selected" id="base-hki" onclick="selectBase('hki')">🏙️ Pääkaupunkiseutu</button>
+    <button class="base-btn" id="base-tre" onclick="selectBase('tre')">🏭 Tampere</button>
+  </div>
   <div style="display:flex;flex-direction:column;gap:8px;">
-    <input class="addr-input" id="baddr-pickup" type="text" placeholder="Noutoosoite..." oninput="clearRoute()">
-    <input class="addr-input" id="baddr" type="text" placeholder="Toimitusosoite..." oninput="clearRoute()">
+    <input class="addr-input" id="baddr-pickup" type="text" placeholder="Asiakkaan lähtöosoite..." oninput="clearRoute()">
+    <input class="addr-input" id="baddr" type="text" placeholder="Asiakkaan uusi koti..." oninput="clearRoute()">
     <button class="route-btn" id="route-btn" onclick="calcRoute()">📍 Laske reitti</button>
   </div>
   <div class="rresult purple" id="bdelivres" style="display:none;"></div>
@@ -387,13 +394,26 @@ function clearRoute(){
   update();
 }
 
+const BASES={
+  hki:{name:'Pääkaupunkiseutu', addr:'Linnavuorentie, 00950 Helsinki, Finland'},
+  tre:{name:'Tampere', addr:'Rantaperkiönkatu 2, Tampere, Finland'}
+};
+let selectedBase='hki';
+
+function selectBase(key){
+  selectedBase=key;
+  document.getElementById('base-hki').classList.toggle('selected', key==='hki');
+  document.getElementById('base-tre').classList.toggle('selected', key==='tre');
+  clearRoute();
+}
+
 function calcRoute(){
   const pickup=document.getElementById('baddr-pickup').value.trim();
   const delivery=document.getElementById('baddr').value.trim();
   if(!pickup && !delivery){ alert('Syötä ainakin yksi osoite'); return; }
   const btn=document.getElementById('route-btn');
   btn.textContent='⏳ Lasketaan...'; btn.className='route-btn loading';
-  const origin='Vuosaari, Helsinki, Finland';
+  const origin=BASES[selectedBase].addr;
   const svc=new google.maps.DistanceMatrixService();
 
   // Build destinations — only non-empty addresses
@@ -413,19 +433,19 @@ function calcRoute(){
       let idx=0;
       if(pickup){
         const el=res.rows[0].elements[idx++];
-        if(el.status==='OK'){ const km=el.distance.value/1000; totalMeters+=el.distance.value*2; parts.push('Haku: '+km.toFixed(1)+' km × 2 = '+(km*2).toFixed(1)+' km'); }
+        if(el.status==='OK'){ const km=el.distance.value/1000; totalMeters+=el.distance.value*2; parts.push('Lähtöosoite: '+km.toFixed(1)+' km × 2 = '+(km*2).toFixed(1)+' km'); }
       }
       if(delivery){
         const el=res.rows[0].elements[idx++];
-        if(el.status==='OK'){ const km=el.distance.value/1000; totalMeters+=el.distance.value*2; parts.push('Toimitus: '+km.toFixed(1)+' km × 2 = '+(km*2).toFixed(1)+' km'); }
+        if(el.status==='OK'){ const km=el.distance.value/1000; totalMeters+=el.distance.value*2; parts.push('Uusi koti: '+km.toFixed(1)+' km × 2 = '+(km*2).toFixed(1)+' km'); }
       }
       bKm=Math.round(totalMeters/100)/10;
-      bDeliv=Math.round((50+bKm*0.5)*100)/100;
+      bDeliv=Math.round((50+bKm*1.0)*100)/100;
       const alv0=bDeliv/1.255;
       bDelivPartner=Math.round(alv0*0.40*100)/100;
       const delivRes=document.getElementById('bdelivres');
       delivRes.style.display='block';
-      delivRes.innerHTML=parts.join('<br>')+'<br>🚗 Yhteensä: <strong>'+bKm.toFixed(1)+' km</strong> → Hinta: <strong>'+bDeliv.toFixed(2)+' €</strong> <span style="color:var(--muted);font-size:12px;">(50 € + '+bKm.toFixed(1)+' km × 0.50 €)</span>';
+      delivRes.innerHTML='<span style="color:var(--muted);font-size:12px;">Tukikohta: '+BASES[selectedBase].name+'</span><br>'+parts.join('<br>')+'<br>🚗 Yhteensä: <strong>'+bKm.toFixed(1)+' km</strong> → Hinta: <strong>'+bDeliv.toFixed(2)+' €</strong> <span style="color:var(--muted);font-size:12px;">(50 € + '+bKm.toFixed(1)+' km × 1 €)</span>';
       btn.textContent='✓ Reitti laskettu'; btn.className='route-btn done';
       update();
     } else {
