@@ -50,6 +50,21 @@
   .section-label.blue { color: var(--blue); border-color: var(--blue-border); }
 
   /* ITEM ROWS */
+  .veh-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px; }
+  .vbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border: 1.5px solid var(--border); border-radius: var(--r); background: var(--white); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); font-family: inherit; }
+  .vbtn span { font-size: 11px; font-weight: 500; color: var(--muted); }
+  .vbtn.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+  .vbtn.selected span { color: var(--accent); }
+  .load-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .load-row input { width: 64px; padding: 7px 8px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; text-align: center; font-family: inherit; }
+  .load-note { font-size: 11px; color: var(--muted); }
+  .cap-note { margin: 8px 12px 0; padding: 9px 11px; border-radius: var(--r); font-size: 12px; line-height: 1.45; }
+  .cap-note:empty { display: none; padding: 0; margin: 0; }
+  .cap-note.ok { background: #F1F7F1; color: #4a7a4a; }
+  .cap-note.capped { background: #FFF4E0; color: #9a6a10; }
+  .fragile-row { opacity: 0.75; }
+  .item-price.free { color: #4a7a4a; font-weight: 600; }
+  .free-tag { font-size: 11px; color: #4a7a4a; background: #F1F7F1; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
   .item-row { display: flex; align-items: center; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r); padding: 11px 12px; margin-bottom: 6px; gap: 8px; transition: border-color 0.15s, background 0.15s; }
   .item-row.active { border-color: var(--accent); background: var(--accent-light); }
   .item-name { flex: 1; font-size: 14px; line-height: 1.25; }
@@ -249,11 +264,29 @@
   <div class="btotal" id="s-header-total">0 €</div>
 </div>
 
-<div class="section"><div class="section-label">Kevyet / Pienet</div><div id="g1"></div></div>
-<div class="section"><div class="section-label">Keskikokoiset</div><div id="g2"></div></div>
-<div class="section"><div class="section-label">Isommat / Kömpelömmät</div><div id="g3"></div></div>
-<div class="section"><div class="section-label">Suuret / Raskaat</div><div id="g4"></div></div>
-<div class="section"><div class="section-label">Erikoiskalusteet</div><div id="g5"></div></div>
+<div class="section">
+  <div class="section-label">Ajoneuvo (määrää kattohinnan)</div>
+  <div class="veh-row">
+    <button class="vbtn" data-veh="pieni-paketti" onclick="setProtVehicle('pieni-paketti')">Pieni 5m³<span>39 €</span></button>
+    <button class="vbtn" data-veh="paketti" onclick="setProtVehicle('paketti')">Paketti 12m³<span>69 €</span></button>
+    <button class="vbtn" data-veh="pitka-paketti" onclick="setProtVehicle('pitka-paketti')">Pitkä 16m³<span>89 €</span></button>
+    <button class="vbtn selected" data-veh="pulla" onclick="setProtVehicle('pulla')">Pulla 20m³<span>109 €</span></button>
+  </div>
+  <div class="load-row">
+    <span>Kuormia</span>
+    <input type="number" id="prot-loads" min="1" step="1" value="1" oninput="setProtLoads(this.value)">
+    <span class="load-note">lisäkuorma nostaa kattoa 78 %</span>
+  </div>
+</div>
+<div class="section"><div class="section-label">Olohuone</div><div id="g_olohuone"></div></div>
+<div class="section"><div class="section-label">Makuuhuone</div><div id="g_makuuhuone"></div></div>
+<div class="section"><div class="section-label">Keittiö ja ruokailu</div><div id="g_keittio_ja_ruokailu"></div></div>
+<div class="section"><div class="section-label">Kodinkoneet</div><div id="g_kodinkoneet"></div></div>
+<div class="section"><div class="section-label">Toimisto</div><div id="g_toimisto"></div></div>
+<div class="section"><div class="section-label">Lasten ja erikois</div><div id="g_lasten_ja_erikois"></div></div>
+<div class="section"><div class="section-label">Ulko ja erikoiset</div><div id="g_ulko_ja_erikoiset"></div></div>
+<div class="section"><div class="section-label">Raskaat tavarat</div><div id="g_raskaat_tavarat"></div></div>
+<div class="section"><div class="section-label">Herkät — suojataan aina veloituksetta</div><div id="g_fragile"></div></div>
 
 <div class="calc-total" style="margin: 10px 12px 0;">
   <div class="ct-top">
@@ -261,10 +294,11 @@
     <div class="ct-amount" id="s-client">0 €</div>
   </div>
   <div class="ct-bottom">
-    <div class="ct-klabel">Kumppanit</div>
+    <div class="ct-klabel">Kumppanit (51,79 %)</div>
     <div class="ct-kamount" id="s-partner">0 €</div>
   </div>
 </div>
+<div class="cap-note" id="s-cap-note"></div>
 
 <div class="msg-card">
   <div class="msg-head"><div class="msg-title">💬 Asiakasviesti</div><button class="copybtn orange" id="cb-s" onclick="copyEl('ms','cb-s')">Kopioi</button></div>
@@ -296,7 +330,7 @@
   <div class="yht-partner">
     <div class="partner-lbl">Kumppanit yhteensä</div>
     <div class="partner-amt" id="yht-partner">0 €</div>
-    <div class="partner-note">× 0.3984 (rappuset + suojaus, ei laatikoita)</div>
+    <div class="partner-note">rappuset × 0,3984 &middot; suojaus × 0,5179 &middot; toimitus 40 %</div>
   </div>
   <div class="cal-card" style="margin: 0 12px 10px;">
     <div class="msg-head">
@@ -313,12 +347,364 @@
 
 <script>
 const ITEMS=[
-  {g:"g1",n:"Pieni jakkara / rahi",p:4},{g:"g1",n:"Yöpöytä",p:5},{g:"g1",n:"Pieni sivupöytä",p:5},{g:"g1",n:"Tuoli",p:5},
-  {g:"g2",n:"Nojatuoli",p:8},{g:"g2",n:"TV-taso",p:8},{g:"g2",n:"Lipasto (matala)",p:10},{g:"g2",n:"Kirjahylly (pieni)",p:10},{g:"g2",n:"2 hengen sohva",p:10},
-  {g:"g3",n:"3 hengen sohva",p:15},{g:"g3",n:"Kulmasohva",p:20},{g:"g3",n:"Sänky 120–140 cm",p:15},{g:"g3",n:"Sänky 160–180 cm",p:20},{g:"g3",n:"Runkopatja (iso)",p:15},
-  {g:"g4",n:"Vaatekaappi (1–2 ovinen)",p:15},{g:"g4",n:"Iso vaatekaappi (3+ ovinen)",p:25},{g:"g4",n:"Ruokapöytä (pieni)",p:10},{g:"g4",n:"Ruokapöytä (iso)",p:15},{g:"g4",n:"Työpöytä",p:10},
-  {g:"g5",n:"Vitriini / lasikaappi",p:20},{g:"g5",n:"Peilikaappi",p:15},{g:"g5",n:"Piano (perus suojaus)",p:20}
+  {g:"g_olohuone",n:"CD-torni kapea",p:2},
+  {g:"g_olohuone",n:"Divaanisohva",p:9},
+  {g:"g_olohuone",n:"Eteispenkki",p:3},
+  {g:"g_olohuone",n:"Huonekasvi",p:3},
+  {g:"g_olohuone",n:"Huonekasvi iso",p:5},
+  {g:"g_olohuone",n:"Keinutuoli",p:4},
+  {g:"g_olohuone",n:"Kenkäkaappi",p:3},
+  {g:"g_olohuone",n:"Kenkäkaappi (purettuna)",p:2},
+  {g:"g_olohuone",n:"Kenkäteline",p:2},
+  {g:"g_olohuone",n:"Kirjahylly korkea",p:5},
+  {g:"g_olohuone",n:"Kirjahylly korkea (purettuna)",p:3},
+  {g:"g_olohuone",n:"Kirjahylly matala",p:4},
+  {g:"g_olohuone",n:"Kirjahylly matala (purettuna)",p:3},
+  {g:"g_olohuone",n:"Korituoli",p:4},
+  {g:"g_olohuone",n:"Kulmasohva iso",p:11},
+  {g:"g_olohuone",n:"Kulmasohva pieni",p:8},
+  {g:"g_olohuone",n:"Lattiavalaisin",p:3},
+  {g:"g_olohuone",n:"Lehtiteline",p:2},
+  {g:"g_olohuone",n:"Lepotuoli",p:7},
+  {g:"g_olohuone",n:"Nojatuoli",p:5},
+  {g:"g_olohuone",n:"Puhelinpöytä",p:3},
+  {g:"g_olohuone",n:"Rahi / jakkara",p:3},
+  {g:"g_olohuone",n:"Rahi / jakkara iso",p:4},
+  {g:"g_olohuone",n:"Rahi pieni",p:2},
+  {g:"g_olohuone",n:"Seinäkaappi",p:4},
+  {g:"g_olohuone",n:"Seinäkaappi (purettuna)",p:3},
+  {g:"g_olohuone",n:"Sermi",p:3},
+  {g:"g_olohuone",n:"Sermi (purettuna)",p:3},
+  {g:"g_olohuone",n:"Sivupöytä",p:3},
+  {g:"g_olohuone",n:"Sohva 2 hlö",p:7},
+  {g:"g_olohuone",n:"Sohva 3 hlö",p:8},
+  {g:"g_olohuone",n:"Sohva 4 hlö",p:9},
+  {g:"g_olohuone",n:"Subwoofer",p:2},
+  {g:"g_olohuone",n:"TV-seinäteline",p:2},
+  {g:"g_olohuone",n:"TV-taso iso",p:5},
+  {g:"g_olohuone",n:"TV-taso pieni",p:3},
+  {g:"g_olohuone",n:"Vahvistin",p:2},
+  {g:"g_olohuone",n:"Valaisin",p:2},
+  {g:"g_olohuone",n:"Verhotanko",p:2},
+  {g:"g_olohuone",n:"Vitriini iso",p:7},
+  {g:"g_olohuone",n:"Vuodesohva",p:8},
+  {g:"g_makuuhuone",n:"Jenkkisänky",p:9},
+  {g:"g_makuuhuone",n:"Jenkkisänky (purettuna)",p:5},
+  {g:"g_makuuhuone",n:"Kaappi (noin 100 x 200 cm)",p:6},
+  {g:"g_makuuhuone",n:"Kaappi (noin 100 x 200 cm) (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Kaappi iso (noin 150 x 220 cm)",p:8},
+  {g:"g_makuuhuone",n:"Kaappi iso (noin 150 x 220 cm) (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Kaappi matala (noin 80 x 80 cm)",p:3},
+  {g:"g_makuuhuone",n:"Kaappi matala (noin 80 x 80 cm) (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Kaappi pieni (noin 60 x 180 cm)",p:4},
+  {g:"g_makuuhuone",n:"Kaappi pieni (noin 60 x 180 cm) (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Kerrossänky",p:7},
+  {g:"g_makuuhuone",n:"Kerrossänky (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Kirjoituspöytä",p:4},
+  {g:"g_makuuhuone",n:"Kirjoituspöytä (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Kylpyhuonekaappi",p:3},
+  {g:"g_makuuhuone",n:"Kylpyhuonekaappi (purettuna)",p:2},
+  {g:"g_makuuhuone",n:"Liinavaatekaappi",p:6},
+  {g:"g_makuuhuone",n:"Liinavaatekaappi (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Lipasto (noin 80 x 80 cm)",p:4},
+  {g:"g_makuuhuone",n:"Lipasto (noin 80 x 80 cm) (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Lipasto iso (noin 120 x 90 cm)",p:6},
+  {g:"g_makuuhuone",n:"Lipasto iso (noin 120 x 90 cm) (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Lipasto kapea ja korkea (noin 45 x 110 cm)",p:3},
+  {g:"g_makuuhuone",n:"Lipasto kapea ja korkea (noin 45 x 110 cm) (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Lipasto leveä (noin 100 x 80 cm)",p:4},
+  {g:"g_makuuhuone",n:"Lipasto leveä (noin 100 x 80 cm) (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Lipasto pieni (noin 60 x 70 cm)",p:3},
+  {g:"g_makuuhuone",n:"Lipasto pieni (noin 60 x 70 cm) (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Meikkipöytä",p:4},
+  {g:"g_makuuhuone",n:"Meikkipöytä (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Ompelukone",p:2},
+  {g:"g_makuuhuone",n:"Parisänky rungolla",p:8},
+  {g:"g_makuuhuone",n:"Parisänky rungolla (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Patja 120–160 cm",p:4},
+  {g:"g_makuuhuone",n:"Patja 180 cm",p:5},
+  {g:"g_makuuhuone",n:"Patja 80–90 cm",p:4},
+  {g:"g_makuuhuone",n:"Runkopatja",p:5},
+  {g:"g_makuuhuone",n:"Säkkituoli",p:4},
+  {g:"g_makuuhuone",n:"Sängynaluslaatikko",p:2},
+  {g:"g_makuuhuone",n:"Sängynpääty",p:3},
+  {g:"g_makuuhuone",n:"Sänky 100 cm",p:6},
+  {g:"g_makuuhuone",n:"Sänky 100 cm (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Sänky 120 cm",p:6},
+  {g:"g_makuuhuone",n:"Sänky 120 cm (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Sänky 140 cm",p:6},
+  {g:"g_makuuhuone",n:"Sänky 140 cm (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Sänky 160 cm",p:7},
+  {g:"g_makuuhuone",n:"Sänky 160 cm (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Sänky 180 cm",p:8},
+  {g:"g_makuuhuone",n:"Sänky 180 cm (purettuna)",p:4},
+  {g:"g_makuuhuone",n:"Sänky 80 cm",p:5},
+  {g:"g_makuuhuone",n:"Sänky 80 cm (purettuna)",p:3},
+  {g:"g_makuuhuone",n:"Vaatekaappi koottu",p:9},
+  {g:"g_makuuhuone",n:"Vaatekaappi purettu",p:5},
+  {g:"g_makuuhuone",n:"Vaatetanko",p:2},
+  {g:"g_makuuhuone",n:"Yöpöytä",p:3},
+  {g:"g_keittio_ja_ruokailu",n:"Astiakaappi",p:6},
+  {g:"g_keittio_ja_ruokailu",n:"Astiakaappi (purettuna)",p:4},
+  {g:"g_keittio_ja_ruokailu",n:"Astialaatikko",p:2},
+  {g:"g_keittio_ja_ruokailu",n:"Baarikaappi",p:5},
+  {g:"g_keittio_ja_ruokailu",n:"Baarikaappi (purettuna)",p:3},
+  {g:"g_keittio_ja_ruokailu",n:"Baarituoli",p:3},
+  {g:"g_keittio_ja_ruokailu",n:"Kattilat ja pannut",p:2},
+  {g:"g_keittio_ja_ruokailu",n:"Pöytä (noin 120 cm)",p:5},
+  {g:"g_keittio_ja_ruokailu",n:"Pöytä (noin 120 cm) (purettuna)",p:3},
+  {g:"g_keittio_ja_ruokailu",n:"Pöytä iso (noin 180 cm)",p:6},
+  {g:"g_keittio_ja_ruokailu",n:"Pöytä iso (noin 180 cm) (purettuna)",p:4},
+  {g:"g_keittio_ja_ruokailu",n:"Pöytä pieni (noin 80 cm)",p:3},
+  {g:"g_keittio_ja_ruokailu",n:"Pöytä pieni (noin 80 cm) (purettuna)",p:3},
+  {g:"g_keittio_ja_ruokailu",n:"Senkki",p:7},
+  {g:"g_keittio_ja_ruokailu",n:"Senkki (purettuna)",p:4},
+  {g:"g_keittio_ja_ruokailu",n:"Tarjoiluvaunu",p:3},
+  {g:"g_keittio_ja_ruokailu",n:"Tuoli",p:3},
+  {g:"g_kodinkoneet",n:"Astianpesukone",p:3},
+  {g:"g_kodinkoneet",n:"Ilmalämpöpumppu (sisäyksikkö)",p:2},
+  {g:"g_kodinkoneet",n:"Ilmalämpöpumppu (ulkoyksikkö)",p:3},
+  {g:"g_kodinkoneet",n:"Ilmankostutin",p:2},
+  {g:"g_kodinkoneet",n:"Ilmanpuhdistin",p:2},
+  {g:"g_kodinkoneet",n:"Ilmastointilaite (siirrettävä)",p:3},
+  {g:"g_kodinkoneet",n:"Jääkaappi",p:7},
+  {g:"g_kodinkoneet",n:"Jääkaappi amerikkalainen",p:9},
+  {g:"g_kodinkoneet",n:"Jääkaappi–pakastin",p:7},
+  {g:"g_kodinkoneet",n:"Kuivauskaappi",p:4},
+  {g:"g_kodinkoneet",n:"Kuivausrumpu",p:3},
+  {g:"g_kodinkoneet",n:"Leivänpaahdin",p:2},
+  {g:"g_kodinkoneet",n:"Liesi",p:4},
+  {g:"g_kodinkoneet",n:"Liesituuletin",p:2},
+  {g:"g_kodinkoneet",n:"Lämminvesivaraaja",p:4},
+  {g:"g_kodinkoneet",n:"Mankeli",p:3},
+  {g:"g_kodinkoneet",n:"Minijääkaappi",p:3},
+  {g:"g_kodinkoneet",n:"Pakastin",p:7},
+  {g:"g_kodinkoneet",n:"Pakastinarkku",p:4},
+  {g:"g_kodinkoneet",n:"Pesukone",p:3},
+  {g:"g_kodinkoneet",n:"Pesutorni (pesukone + kuivausrumpu)",p:5},
+  {g:"g_kodinkoneet",n:"Pyykkikori",p:2},
+  {g:"g_kodinkoneet",n:"Pyykkiteline",p:2},
+  {g:"g_kodinkoneet",n:"Pölynimuri",p:2},
+  {g:"g_kodinkoneet",n:"Robotti-imuri",p:2},
+  {g:"g_kodinkoneet",n:"Silityslauta",p:2},
+  {g:"g_kodinkoneet",n:"Sähköpatteri / lämmitin",p:2},
+  {g:"g_kodinkoneet",n:"Tuuletin",p:2},
+  {g:"g_kodinkoneet",n:"Uuni",p:3},
+  {g:"g_kodinkoneet",n:"Vedenkeitin",p:2},
+  {g:"g_kodinkoneet",n:"Yleiskone",p:2},
+  {g:"g_toimisto",n:"Arkistokaappi",p:5},
+  {g:"g_toimisto",n:"Arkistokaappi (purettuna)",p:3},
+  {g:"g_toimisto",n:"Arkistokaappi iso",p:8},
+  {g:"g_toimisto",n:"Arkistokaappi iso (purettuna)",p:4},
+  {g:"g_toimisto",n:"Arkistokaappi pieni",p:4},
+  {g:"g_toimisto",n:"Arkistokaappi pieni (purettuna)",p:3},
+  {g:"g_toimisto",n:"Hylly",p:4},
+  {g:"g_toimisto",n:"Hylly (purettuna)",p:3},
+  {g:"g_toimisto",n:"Kopiokone / monitoimilaite",p:4},
+  {g:"g_toimisto",n:"Lokerikko",p:3},
+  {g:"g_toimisto",n:"Neuvottelupöytä",p:7},
+  {g:"g_toimisto",n:"Neuvottelupöytä (purettuna)",p:4},
+  {g:"g_toimisto",n:"Pelituoli",p:3},
+  {g:"g_toimisto",n:"Piirustuspöytä",p:5},
+  {g:"g_toimisto",n:"Piirustuspöytä (purettuna)",p:3},
+  {g:"g_toimisto",n:"Serverikaappi",p:4},
+  {g:"g_toimisto",n:"Sähköpöytä",p:5},
+  {g:"g_toimisto",n:"Sähköpöytä (purettuna)",p:4},
+  {g:"g_toimisto",n:"Toimistotuoli",p:3},
+  {g:"g_toimisto",n:"Työkaluvaunu",p:3},
+  {g:"g_toimisto",n:"Työpöytä",p:4},
+  {g:"g_toimisto",n:"Työpöytä (purettuna)",p:3},
+  {g:"g_toimisto",n:"Varastohylly (osa)",p:4},
+  {g:"g_toimisto",n:"Varastohylly (osa) (purettuna)",p:3},
+  {g:"g_lasten_ja_erikois",n:"Amme iso",p:5},
+  {g:"g_lasten_ja_erikois",n:"Digipiano",p:3},
+  {g:"g_lasten_ja_erikois",n:"Hoitopöytä",p:4},
+  {g:"g_lasten_ja_erikois",n:"Hoitopöytä (purettuna)",p:3},
+  {g:"g_lasten_ja_erikois",n:"Jakkara",p:2},
+  {g:"g_lasten_ja_erikois",n:"Kaiutin iso",p:3},
+  {g:"g_lasten_ja_erikois",n:"Kaiutin pieni",p:2},
+  {g:"g_lasten_ja_erikois",n:"Kissan kiipeilypuu",p:3},
+  {g:"g_lasten_ja_erikois",n:"Kissan kiipeilypuu (purettuna)",p:3},
+  {g:"g_lasten_ja_erikois",n:"Kolmipyörä",p:2},
+  {g:"g_lasten_ja_erikois",n:"Lasten sähköauto",p:3},
+  {g:"g_lasten_ja_erikois",n:"Lastenrattaat",p:3},
+  {g:"g_lasten_ja_erikois",n:"Lastensänky",p:5},
+  {g:"g_lasten_ja_erikois",n:"Lastensänky (purettuna)",p:3},
+  {g:"g_lasten_ja_erikois",n:"Leikkimatto",p:2},
+  {g:"g_lasten_ja_erikois",n:"Leikkimökki",p:5},
+  {g:"g_lasten_ja_erikois",n:"Leikkimökki (purettuna)",p:3},
+  {g:"g_lasten_ja_erikois",n:"Lelulaatikko",p:3},
+  {g:"g_lasten_ja_erikois",n:"Lelulaatikko (purettuna)",p:3},
+  {g:"g_lasten_ja_erikois",n:"Maalausteline",p:2},
+  {g:"g_lasten_ja_erikois",n:"Matto iso (rullattuna)",p:4},
+  {g:"g_lasten_ja_erikois",n:"Matto rullattuna",p:3},
+  {g:"g_lasten_ja_erikois",n:"Nukkekoti",p:2},
+  {g:"g_lasten_ja_erikois",n:"Nukkekoti (purettuna)",p:2},
+  {g:"g_lasten_ja_erikois",n:"Pieni amme",p:3},
+  {g:"g_lasten_ja_erikois",n:"Pinnasänky",p:5},
+  {g:"g_lasten_ja_erikois",n:"Pinnasänky (purettuna)",p:3},
+  {g:"g_lasten_ja_erikois",n:"Pystynaulakko",p:2},
+  {g:"g_lasten_ja_erikois",n:"Pystynaulakko (purettuna)",p:2},
+  {g:"g_lasten_ja_erikois",n:"Pyörätuoli",p:3},
+  {g:"g_lasten_ja_erikois",n:"Rollaattori",p:2},
+  {g:"g_lasten_ja_erikois",n:"Rumpusetti",p:4},
+  {g:"g_lasten_ja_erikois",n:"Syöttötuoli",p:3},
+  {g:"g_lasten_ja_erikois",n:"Turvaistuin",p:2},
+  {g:"g_lasten_ja_erikois",n:"Turvaportti",p:2},
+  {g:"g_lasten_ja_erikois",n:"Verhot (pakattu)",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Aurinkotuoli",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Aurinkovarjo",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Crosstrainer",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Golfbägi",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Grilli",p:5},
+  {g:"g_ulko_ja_erikoiset",n:"Grilli pieni",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Juoksumatto",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Kajakki",p:5},
+  {g:"g_ulko_ja_erikoiset",n:"Kasvihuone (purettu)",p:5},
+  {g:"g_ulko_ja_erikoiset",n:"Kiuas",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Kottikärryt",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Kuntopyörä",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Kuntosalilaite",p:5},
+  {g:"g_ulko_ja_erikoiset",n:"Kuntosalilaite (purettuna)",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Lastenpyörä",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Lehtipuhallin",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Letkukela",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Levypainosarja",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Lumilinko",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Metallinen hylly",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Metallinen hylly (purettuna)",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Moottoripyörä",p:5},
+  {g:"g_ulko_ja_erikoiset",n:"Moottorisaha",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Mopo / skootteri",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Nyrkkeilysäkki",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Painepesuri",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Painopenkki",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Painopenkki (purettuna)",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Palju",p:8},
+  {g:"g_ulko_ja_erikoiset",n:"Parvekekeinu (jalustalla)",p:5},
+  {g:"g_ulko_ja_erikoiset",n:"Parvekekeinu (jalustalla) (purettuna)",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Parvekepöytä",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Parvekepöytä (purettuna)",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Pensasleikkuri",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Perämoottori",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Pihakeinu",p:5},
+  {g:"g_ulko_ja_erikoiset",n:"Pihakeinu (purettuna)",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Pihavaja (purettu)",p:12},
+  {g:"g_ulko_ja_erikoiset",n:"Polkupyörä",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Polttopuut (lava)",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Potkulauta",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Puutarhapöytä",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Puutarhapöytä (purettuna)",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Puutarhatuoli",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Rengassarja",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Riippumatto",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Ruohonleikkuri",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"SUP-lauta",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Soutulaite",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Soutuvene",p:8},
+  {g:"g_ulko_ja_erikoiset",n:"Sukset",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Sähköpyörä",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Terassilämmitin",p:3},
+  {g:"g_ulko_ja_erikoiset",n:"Trampoliini iso (purettuna)",p:5},
+  {g:"g_ulko_ja_erikoiset",n:"Trampoliini pieni (purettuna)",p:4},
+  {g:"g_ulko_ja_erikoiset",n:"Työkalupakki",p:2},
+  {g:"g_ulko_ja_erikoiset",n:"Vanerilevy",p:3},
+  {g:"g_raskaat_tavarat",n:"Aggregaatti",p:3},
+  {g:"g_raskaat_tavarat",n:"Biljardipöytä",p:9},
+  {g:"g_raskaat_tavarat",n:"Biljardipöytä (purettuna)",p:5},
+  {g:"g_raskaat_tavarat",n:"Kassakaappi iso",p:4},
+  {g:"g_raskaat_tavarat",n:"Kassakaappi pieni",p:3},
+  {g:"g_raskaat_tavarat",n:"Kompressori",p:3},
+  {g:"g_raskaat_tavarat",n:"Moottori (lavalla)",p:3},
+  {g:"g_raskaat_tavarat",n:"Pingispöytä (taitettu)",p:5},
+  {g:"g_raskaat_tavarat",n:"Sähkö-/jakokaappi",p:3},
+  {g:"g_raskaat_tavarat",n:"Tallelokero",p:3},
+  {g:"g_raskaat_tavarat",n:"Teollisuuspumppu",p:2},
+  {g:"g_raskaat_tavarat",n:"Työmaakoppi",p:40},
+  {g:"g_raskaat_tavarat",n:"Työpenkki",p:5},
+  {g:"g_raskaat_tavarat",n:"Työpenkki (purettuna)",p:3}
 ];
+const FRAGILE=[
+  {g:"g_olohuone",n:"Antiikkikaappi"},
+  {g:"g_olohuone",n:"Kaappikello"},
+  {g:"g_olohuone",n:"Kattovalaisin"},
+  {g:"g_olohuone",n:"Levysoitin"},
+  {g:"g_olohuone",n:"Sohvapöytä"},
+  {g:"g_olohuone",n:"Sohvapöytä (purettuna)"},
+  {g:"g_olohuone",n:"Taideteos / veistos"},
+  {g:"g_olohuone",n:"Taulu (iso)"},
+  {g:"g_olohuone",n:"Taulu (pieni)"},
+  {g:"g_olohuone",n:"Televisio 55"},
+  {g:"g_olohuone",n:"Televisio 65"},
+  {g:"g_olohuone",n:"Televisio 75"},
+  {g:"g_olohuone",n:"Televisio pieni (32-43)"},
+  {g:"g_olohuone",n:"Vanha lipasto"},
+  {g:"g_olohuone",n:"Vitriinikaappi"},
+  {g:"g_makuuhuone",n:"Peili (kokovartalo)"},
+  {g:"g_makuuhuone",n:"Peili pieni"},
+  {g:"g_keittio_ja_ruokailu",n:"Kahvikone"},
+  {g:"g_keittio_ja_ruokailu",n:"Kahvinkeitin"},
+  {g:"g_keittio_ja_ruokailu",n:"Lasipöytä"},
+  {g:"g_keittio_ja_ruokailu",n:"Lasipöytä (purettuna)"},
+  {g:"g_keittio_ja_ruokailu",n:"Mikroaaltouuni"},
+  {g:"g_keittio_ja_ruokailu",n:"Pöytälevy"},
+  {g:"g_kodinkoneet",n:"Viinikaappi"},
+  {g:"g_toimisto",n:"Näyttö"},
+  {g:"g_toimisto",n:"Tietokone (pöytäkone)"},
+  {g:"g_toimisto",n:"Tulostin"},
+  {g:"g_lasten_ja_erikois",n:"Akvaario (tyhjä)"},
+  {g:"g_lasten_ja_erikois",n:"Akvaario iso (tyhjä)"},
+  {g:"g_lasten_ja_erikois",n:"DJ-laitteisto"},
+  {g:"g_lasten_ja_erikois",n:"Kitara (kotelossa)"},
+  {g:"g_lasten_ja_erikois",n:"Kontrabasso"},
+  {g:"g_lasten_ja_erikois",n:"Kukkaruukku"},
+  {g:"g_lasten_ja_erikois",n:"Sello"},
+  {g:"g_lasten_ja_erikois",n:"Viulu"},
+  {g:"g_raskaat_tavarat",n:"Flyygeli"},
+  {g:"g_raskaat_tavarat",n:"Piano"},
+  {g:"g_raskaat_tavarat",n:"Takka / kamiina"},
+  {g:"g_raskaat_tavarat",n:"Urut / harmoni"},
+  {g:"g_rakennustarvikkeet",n:"Ikkunaelementti"},
+  {g:"g_rakennustarvikkeet",n:"Lasilava / A-teline"},
+  {g:"g_rakennustarvikkeet",n:"Pesuallas"},
+  {g:"g_rakennustarvikkeet",n:"Suihkukaappi"},
+  {g:"g_rakennustarvikkeet",n:"WC-istuin"}
+];
+
+// ─── TUOTANNON SUOJAUSSÄÄNNÖT (prices.js / googleSheetsConfig.js) ───────────
+// Herkät tavarat suojataan aina ilmaiseksi eikä niitä voi poistaa.
+// Muille: tavarakohtainen hinta, jota rajaa autokoon kattohinta.
+//   d     = kattohinta / suojattavien summa   (enintään 1)
+//   hinta = summa x d,  vähintään 10 €
+// Kumppanin osuus 51,79 % asiakashinnasta (kate 35 % alvittomasta).
+const PROT_CAP={"pieni-paketti":39,"paketti":69,"pitka-paketti":89,"pulla":109};
+const PROT_MIN=10;
+const PROT_EXTRA_LOAD=0.78;
+const PROT_PARTNER_SHARE=0.5179;
+let protVehicle="pulla", protLoads=1;
+
+function protCap(){
+  return (PROT_CAP[protVehicle]||109)*(1+PROT_EXTRA_LOAD*Math.max(0,protLoads-1));
+}
+// Palauttaa {full, capped, discount, cap, partner}
+function protCalc(){
+  let full=0;
+  ITEMS.forEach((it,i)=>{ full+=it.p*(Q[i]||0); });
+  const cap=protCap();
+  const discount=full>0?Math.min(1,cap/full):1;
+  const capped=full>0?Math.max(PROT_MIN,Math.round(full*discount)):0;
+  return {full:Math.round(full*100)/100, capped, discount, cap:Math.round(cap),
+          partner:Math.round(capped*PROT_PARTNER_SHARE*100)/100};
+}
+function setProtVehicle(v){
+  protVehicle=v;
+  document.querySelectorAll('[data-veh]').forEach(b=>b.classList.toggle('selected',b.dataset.veh===v));
+  update();
+}
+function setProtLoads(n){
+  protLoads=Math.max(1,Number(n)||1);
+  update();
+}
 const Q={};ITEMS.forEach((_,i)=>Q[i]=0);
 let rC=0,rP=0,rI=0,rF=0,rPr=1;
 let bC=0,bI=0,bD=1,bKm=0,bDeliv=50,bDelivPartner=0;
@@ -346,11 +732,22 @@ function updateAppliance(){
 
 function renderItems(){
   ITEMS.forEach((item,i)=>{
-    const c=document.getElementById(item.g),d=document.createElement("div");
+    const c=document.getElementById(item.g); if(!c) return;
+    const d=document.createElement("div");
     d.className="item-row";d.id="row"+i;
     d.innerHTML='<div class="item-name">'+item.n+'</div><div class="item-price">'+item.p+' €</div><div class="qty-wrap"><button class="qbtn" onclick="cq('+i+',-1)">−</button><div class="qnum" id="q'+i+'">0</div><button class="qbtn" onclick="cq('+i+',1)">+</button></div>';
     c.appendChild(d);
   });
+  // Herkät: aina ilmainen, ei määrää - vain tiedoksi aspalle
+  const fc=document.getElementById("g_fragile");
+  if(fc){
+    FRAGILE.forEach(f=>{
+      const d=document.createElement("div");
+      d.className="item-row fragile-row";
+      d.innerHTML='<div class="item-name">'+f.n+'</div><div class="item-price free">0 €</div><div class="qty-wrap"><span class="free-tag">aina mukana</span></div>';
+      fc.appendChild(d);
+    });
+  }
 }
 
 function cq(i,d){
@@ -457,10 +854,10 @@ function calcRoute(){
 function fmt(n){ return n%1===0 ? n+" €" : n.toFixed(2)+" €"; }
 
 function update(){
-  // Suojaus
-  let s=0;
-  ITEMS.forEach((item,i)=>{s+=item.p*(Q[i]||0);});
-  const sP=s*0.3984;
+  // Suojaus - tuotannon sääntö: summa x kattoalennus, min 10 €
+  const pc=protCalc();
+  const s=pc.capped;
+  const sP=pc.partner;
 
   // Rappuset
   const rPart=rC*0.3984;
@@ -482,11 +879,25 @@ function update(){
   // Suojaus block
   document.getElementById("s-client").textContent=fmt(s);
   document.getElementById("s-partner").textContent=fmt(sP);
+  const capEl=document.getElementById("s-cap-note");
+  if(capEl){
+    if(pc.full<=0){ capEl.textContent=""; capEl.className="cap-note"; }
+    else if(pc.discount<1){
+      capEl.innerHTML="Listahinta <b>"+pc.full.toFixed(2)+" €</b> ylittää kattohinnan <b>"+pc.cap+" €</b> &rarr; kerroin <b>"+pc.discount.toFixed(3)+"</b>";
+      capEl.className="cap-note capped";
+    } else if(pc.capped===PROT_MIN && Math.round(pc.full)<PROT_MIN){
+      capEl.innerHTML="Minimihinta <b>"+PROT_MIN+" €</b> (listahinta "+pc.full.toFixed(2)+" €)";
+      capEl.className="cap-note capped";
+    } else {
+      capEl.innerHTML="Kattohinta "+pc.cap+" € &mdash; ei ylity";
+      capEl.className="cap-note ok";
+    }
+  }
 
   // Yhteenveto — näkyy kun vähintään 2 laskuria aktiivisia
   const bActive=bC>0||bKm>0;
   const active=[rC>0, bActive, s>0].filter(Boolean).length;
-  const total=s+rC+bC+bDeliv, totalP=(s+rC)*0.3984+bDelivPartner;
+  const total=s+rC+bC+bDeliv, totalP=rC*0.3984+sP+bDelivPartner;
   document.getElementById("yhteenveto").classList.toggle("visible", active>=2);
   if(active>=2){
     document.getElementById("yht-total").textContent=fmt(total);
@@ -533,19 +944,22 @@ function update(){
   } else mbk.innerHTML='<span class="empty">Täytä kilometrit ensin.</span>';
 
   // Suojaus asiakasviesti
-  const lines=[];let st=0;
-  ITEMS.forEach((item,i)=>{if(Q[i]>0){const lt=item.p*Q[i];st+=lt;lines.push("• "+item.n+(Q[i]>1?" × "+Q[i]:"")+": "+lt+" €");}});
+  const lines=[];
+  ITEMS.forEach((item,i)=>{ if(Q[i]>0){
+    const lt=item.p*Q[i]*pc.discount;
+    lines.push("• "+item.n+(Q[i]>1?" × "+Q[i]:"")+": "+lt.toFixed(2)+" €");
+  }});
   const ms=document.getElementById("ms");
   if(lines.length>0){
     ms.innerHTML="";
-    ms.textContent="Tässä hinta suojaukselle:\n\n"+st+" €";
+    ms.textContent="Tässä hinta suojaukselle:\n\n"+s+" €";
   } else ms.innerHTML='<span class="empty">Valitse tavaroita ensin.</span>';
 
   // Suojaus kalenteriviesti
   const msk=document.getElementById("msk");
   if(s>0){
     msk.innerHTML="";
-    msk.textContent="Suojaus: +"+sP.toFixed(2)+" € ("+perS.toFixed(2)+" € / "+rPr+" hlö)";
+    msk.textContent="Suojaus: +"+sP.toFixed(2)+" € (51,79 % / "+perS.toFixed(2)+" € / "+rPr+" hlö)";
   } else msk.innerHTML='<span class="empty">Valitse tavaroita ensin.</span>';
 
   // Yhteenveto kalenteriviesti
@@ -587,6 +1001,9 @@ function resetAll(){
   document.getElementById("bres").innerHTML="Vuokra: <strong>0 €</strong> <span style='color:var(--muted);font-size:12px;'>(0.20 € / ltk / vrk)</span>";
   const bdr=document.getElementById("bdelivres"); bdr.style.display='none'; bdr.innerHTML='';
   const rbtn=document.getElementById('route-btn'); if(rbtn){rbtn.textContent='📍 Laske reitti';rbtn.className='route-btn';}
+  protVehicle="pulla"; protLoads=1;
+  const plEl=document.getElementById("prot-loads"); if(plEl) plEl.value=1;
+  document.querySelectorAll('[data-veh]').forEach(b=>b.classList.toggle('selected',b.dataset.veh==="pulla"));
   appDish=false; appWash=false;
   ['kd-btn','kw-btn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.remove('selected'); });
   document.getElementById('mk').innerHTML='<span class="empty">Valitse asennukset ensin.</span>';
