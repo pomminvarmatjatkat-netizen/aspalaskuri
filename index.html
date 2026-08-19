@@ -76,6 +76,21 @@
   .qbtn:active { transform: scale(0.88); background: var(--accent-dark); }
   .qnum { font-size: 16px; font-weight: 700; width: 22px; text-align: center; }
 
+  /* TAVARAHAKU */
+  .search-sec { position: sticky; top: 0; z-index: 30; background: var(--bg); padding: 8px 0; margin: 10px 12px 0; }
+  .search-wrap { position: relative; display: flex; align-items: center; }
+  .search-icon { position: absolute; left: 12px; font-size: 14px; opacity: 0.5; pointer-events: none; }
+  .search-input { width: 100%; padding: 12px 40px 12px 34px; background: var(--white); border: 1.5px solid var(--border); border-radius: 10px; font-family: "DM Sans", sans-serif; font-size: 15px; color: var(--text); outline: none; -webkit-appearance: none; transition: border-color 0.15s; }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::-webkit-search-cancel-button, .search-input::-webkit-search-decoration { -webkit-appearance: none; }
+  .search-clear { display: none; position: absolute; right: 5px; width: 30px; height: 30px; border: none; background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; align-items: center; justify-content: center; touch-action: manipulation; }
+  .search-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; min-height: 20px; }
+  .search-hint { font-size: 11px; color: var(--muted); }
+  .search-hint.none { color: #c0392b; }
+  .sel-only { border: 1.5px solid var(--border); background: var(--white); border-radius: 8px; padding: 5px 10px; font-family: "DM Sans", sans-serif; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; touch-action: manipulation; white-space: nowrap; }
+  .sel-only.on { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+  .is-hidden { display: none !important; }
+
   /* RAPPUSET CARD */
   .rcard { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 13px; margin: 10px 12px 0; }
   .frow { display: flex; align-items: center; justify-content: space-between; }
@@ -278,6 +293,18 @@
     <span class="load-note">lisäkuorma nostaa kattoa 78 %</span>
   </div>
 </div>
+<div class="section search-sec">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="search" id="item-search" class="search-input" placeholder="Hae tavaraa… (esim. sohva, tv, jaakaappi)" autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterItems()">
+    <button type="button" class="search-clear" id="search-clear" onclick="clearItemSearch()" aria-label="Tyhjennä haku">✕</button>
+  </div>
+  <div class="search-meta">
+    <div class="search-hint" id="search-hint"></div>
+    <button type="button" class="sel-only" id="sel-only" onclick="toggleSelectedOnly()">Valitut · 0</button>
+  </div>
+</div>
+
 <div class="section"><div class="section-label">Olohuone</div><div id="g_olohuone"></div></div>
 <div class="section"><div class="section-label">Makuuhuone</div><div id="g_makuuhuone"></div></div>
 <div class="section"><div class="section-label">Keittiö ja ruokailu</div><div id="g_keittio_ja_ruokailu"></div></div>
@@ -730,13 +757,27 @@ function updateAppliance(){
   else mk.innerHTML='<span class="empty">Valitse asennukset ensin.</span>';
 }
 
+// ─── TAVARAHAKU ──────────────────────────────────────────────────────
+// Hakusanat normalisoidaan: ä/ö → a/o, välimerkit pois. "sahko" löytää "Sähkö-/jakokaapin".
+const SEARCH_ALIASES={tv:"televisio",telkkari:"televisio",telkka:"televisio",pc:"tietokone",
+  mikro:"mikroaaltouuni",pesuri:"pesukone",tiskari:"tiskikone"};
+let PROT_ROWS=[], PROT_SECTIONS=[], showOnlySelected=false;
+
+function normTxt(s){
+  return (s||"").toString().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9]+/g," ").trim();
+}
+
 function renderItems(){
+  PROT_ROWS=[]; PROT_SECTIONS=[];
   ITEMS.forEach((item,i)=>{
     const c=document.getElementById(item.g); if(!c) return;
     const d=document.createElement("div");
     d.className="item-row";d.id="row"+i;
     d.innerHTML='<div class="item-name">'+item.n+'</div><div class="item-price">'+item.p+' €</div><div class="qty-wrap"><button class="qbtn" onclick="cq('+i+',-1)">−</button><div class="qnum" id="q'+i+'">0</div><button class="qbtn" onclick="cq('+i+',1)">+</button></div>';
     c.appendChild(d);
+    PROT_ROWS.push({el:d, idx:i, txt:normTxt(item.n+" "+sectionLabel(c))});
   });
   // Herkät: aina ilmainen, ei määrää - vain tiedoksi aspalle
   const fc=document.getElementById("g_fragile");
@@ -746,8 +787,65 @@ function renderItems(){
       d.className="item-row fragile-row";
       d.innerHTML='<div class="item-name">'+f.n+'</div><div class="item-price free">0 €</div><div class="qty-wrap"><span class="free-tag">aina mukana</span></div>';
       fc.appendChild(d);
+      PROT_ROWS.push({el:d, idx:null, txt:normTxt(f.n+" herkat suojataan aina")});
     });
   }
+  // Osiot, jotka piilotetaan kun niissä ei ole osumia
+  ["g_olohuone","g_makuuhuone","g_keittio_ja_ruokailu","g_kodinkoneet","g_toimisto",
+   "g_lasten_ja_erikois","g_ulko_ja_erikoiset","g_raskaat_tavarat","g_fragile"].forEach(id=>{
+    const c=document.getElementById(id);
+    if(c && c.closest(".section")) PROT_SECTIONS.push(c.closest(".section"));
+  });
+}
+
+function sectionLabel(container){
+  const sec=container.closest(".section");
+  const lbl=sec?sec.querySelector(".section-label"):null;
+  return lbl?lbl.textContent:"";
+}
+
+function filterItems(){
+  const inp=document.getElementById("item-search");
+  const raw=inp?inp.value:"";
+  const terms=normTxt(raw).split(" ").filter(Boolean).map(t=>SEARCH_ALIASES[t]||t);
+  const clr=document.getElementById("search-clear");
+  if(clr) clr.style.display=raw.trim()?"flex":"none";
+
+  let hits=0, hiddenSelected=0, selCount=0;
+  PROT_ROWS.forEach(r=>{
+    const qty=r.idx!==null?(Q[r.idx]||0):0;
+    if(qty>0) selCount++;
+    const textOk=terms.length===0||terms.every(t=>r.txt.indexOf(t)!==-1);
+    const selOk=!showOnlySelected||qty>0;
+    const show=textOk&&selOk;
+    r.el.classList.toggle("is-hidden",!show);
+    if(show) hits++;
+    else if(qty>0&&!textOk) hiddenSelected++;
+  });
+  PROT_SECTIONS.forEach(sec=>{
+    sec.classList.toggle("is-hidden", !sec.querySelector(".item-row:not(.is-hidden)"));
+  });
+
+  const selBtn=document.getElementById("sel-only");
+  if(selBtn){ selBtn.textContent="Valitut \u00b7 "+selCount; selBtn.classList.toggle("on",showOnlySelected); }
+
+  const hint=document.getElementById("search-hint");
+  if(hint){
+    if(!terms.length&&!showOnlySelected){ hint.textContent=""; hint.className="search-hint"; }
+    else if(hits===0){ hint.textContent=showOnlySelected&&!terms.length?"Ei valittuja tavaroita":"Ei osumia \u2014 kokeile lyhyemp\u00e4\u00e4 hakusanaa"; hint.className="search-hint none"; }
+    else { hint.textContent=hits+(hits===1?" osuma":" osumaa")+(hiddenSelected?" \u00b7 "+hiddenSelected+(hiddenSelected===1?" valittu":" valittua")+" piilossa":""); hint.className="search-hint"; }
+  }
+}
+
+function clearItemSearch(){
+  const inp=document.getElementById("item-search");
+  if(inp){ inp.value=""; inp.focus(); }
+  filterItems();
+}
+
+function toggleSelectedOnly(){
+  showOnlySelected=!showOnlySelected;
+  filterItems();
 }
 
 function cq(i,d){
@@ -937,11 +1035,13 @@ function update(){
 
   // Laatikot kalenteriviesti (toimitus + kumppanin osuus)
   const mbk=document.getElementById("mbk");
-  if(bKm>0){
-    mbk.innerHTML="";
-    const alv0=(bDeliv/1.255);
-    mbk.textContent="Toimitus asiakkaalle: "+bDeliv.toFixed(2)+" €\nALV 0 hinta: "+alv0.toFixed(2)+" €\nKumppani (40%): +"+bDelivPartner.toFixed(2)+" €";
-  } else mbk.innerHTML='<span class="empty">Täytä kilometrit ensin.</span>';
+  if(mbk){
+    if(bKm>0){
+      mbk.innerHTML="";
+      const alv0=(bDeliv/1.255);
+      mbk.textContent="Toimitus asiakkaalle: "+bDeliv.toFixed(2)+" €\nALV 0 hinta: "+alv0.toFixed(2)+" €\nKumppani (40%): +"+bDelivPartner.toFixed(2)+" €";
+    } else mbk.innerHTML='<span class="empty">Täytä kilometrit ensin.</span>';
+  }
 
   // Suojaus asiakasviesti
   const lines=[];
@@ -975,6 +1075,9 @@ function update(){
     lines2.push("Kumppanit yht: +"+totalP.toFixed(2)+" € ("+perT.toFixed(2)+" € / "+rPr+" hlö)");
     myk.textContent=lines2.join("\n");
   }
+
+  // Paivita hakunakyma: valittujen maara ja "vain valitut" -suodatus
+  filterItems();
 }
 
 function copyEl(elId, btnId){
@@ -1007,6 +1110,8 @@ function resetAll(){
   appDish=false; appWash=false;
   ['kd-btn','kw-btn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.remove('selected'); });
   document.getElementById('mk').innerHTML='<span class="empty">Valitse asennukset ensin.</span>';
+  const srch=document.getElementById("item-search"); if(srch) srch.value="";
+  showOnlySelected=false;
   update();
 }
 
